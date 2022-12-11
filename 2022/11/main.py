@@ -1,7 +1,7 @@
 #!/bin/python3
 import sys
 from functools import reduce
-from monkey import Monkey
+from monkey import Monkey, ModuloMonkey
 
 def read_file():
     filename = 'input.txt'
@@ -29,11 +29,11 @@ def main():
 
     monkeys = []
     for i in range(0, len(lines)-1, 7):
-        monkeys.append(Monkey(lines[i:i+6], False))
+        monkeys.append(ModuloMonkey(lines[i:i+6]))
     for i in range(10000):
         for m in range(len(monkeys)):
-            trown_objects = monkeys[m].operate_and_throw()
-            for mn, it in trown_objects:
+            thrown_objects = monkeys[m].operate_and_throw()
+            for mn, it in thrown_objects:
                 monkeys[mn].add_item(it)
 
     list_inspected = [m.items_inspected for m in monkeys]
