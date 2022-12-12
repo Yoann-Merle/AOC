@@ -53,23 +53,34 @@ def build_paths(m, cp):
 
 def main():
     lines = read_file()
-    current_position = (0, 0)
+    starting_position = (0, 0)
+    possible_start_positions = set()
     mapping = []
     for i in range(len(lines)):
         mapping.append([])
         for j in range(len(lines[i])):
             if lines[i][j] == 'S':
-                current_position = (i, j)
+                starting_position = (i, j)
+                possible_start_positions.add((i, j))
+            if lines[i][j] == 'a':
+                possible_start_positions.add((i, j))
             mapping[i].append(lines[i][j])
-    possible_paths = build_paths(mapping, current_position)
-    min_ = 100000
-    shortest_path = []
-    for pp in possible_paths:
-        if mapping[pp[-1][0]][pp[-1][1]] == 'E' \
-            and len(pp) < min_:
-            shortest_path = pp
-            min_ = len(pp)
-    print("Start 1: ", len(shortest_path))
+
+    min_path = 100000
+    for psp in possible_start_positions:
+        possible_paths = build_paths(mapping, psp)
+        min_ = 100000
+        for pp in possible_paths:
+            if mapping[pp[-1][0]][pp[-1][1]] == 'E' \
+                and len(pp) - 1 < min_:
+                min_ = len(pp) - 1
+        if psp == starting_position:
+            print("Start 1: ", min_)
+
+        if min_ < min_path:
+            min_path = min_
+    print("Start 2: ", min_path)
+
 
 
 main()
