@@ -1,0 +1,163 @@
+#!/bin/python
+import itertools
+import copy
+import sys
+
+
+def read_file():
+    filename = 'input.txt'
+    if len(sys.argv) == 2 and sys.argv[1] == '-t':
+        filename = 'input-test.txt'
+    with open(filename) as f:
+        lines = f.read().splitlines()
+
+    return lines
+
+
+def parse_machines(lines):
+    machines = []
+    for line in lines:
+        blocks = line.split()
+        leds_s = blocks[0]
+        leds = []
+        for led in leds_s:
+            if led == '.':
+                leds.append(0)
+            if led == '#':
+                leds.append(1)
+        buttons_s = blocks[1:-1]
+        buttons = []
+        for button in buttons_s:
+            button = button.replace('(', '').replace(')', '')
+            button_number = [int(b) for b in button.split(',')]
+            buttons.append(button_number)
+        jolts_s = blocks[-1]
+        jolts_s = jolts_s.replace('{', '').replace('}', '')
+        jolts = [int(b) for b in jolts_s.split(',')]
+        machines.append({'leds': leds, 'buttons': buttons, 'jolts': jolts})
+
+    return machines
+
+
+def apply_button(leds, button):
+    new_leds = copy.deepcopy(leds)
+    for b in button:
+        new_leds[b] = (leds[b] + 1) % 2
+
+    return new_leds
+
+
+def solve(machine, combs):
+    target = machine['leds']
+    solution = []
+    for comb in combs:
+        leds = [0 for _ in target]
+        for button in comb:
+            leds = apply_button(leds, button)
+        if leds == target:
+            if len(solution) == 0 or len(solution) > len(comb):
+                solution = comb
+    return solution
+
+
+def state_reduct_2(state):
+    while True:
+        reduc = False
+        for led in range(len(state["leds"])):
+            buts = buttons_for_idx_led(state["buttons"], led)
+            if len(buts) == 2:
+                states_clones = []
+                for new_index in range(state["leds"][led]["objectif"]):
+                    state_clone = copy.deepcopy(state)
+                    state_clone["pressed"][buts[0]] = new_index
+                    state_clone["buttons"] = remove_but_with_led_idx(
+                        state_clone["buttons"], led)
+                    states_clones.append(state_clone)
+                reduc = True
+                break
+        if not reduc:
+            break
+    return state_clone
+
+
+def calc_combinaisons(buttons):
+    comb = []
+    for b in range(len(buttons) + 1):
+        comb += itertools.combinations(buttons, b)
+    return comb
+
+
+class Machine:
+
+    def __init__(self, wanted_state, buttons):
+        self._buttons = buttons
+        self._wanted_state = wanted_state
+        self._current_state = [0 for _ in range(len(wanted_state))]
+        self._buttons_pressed = dict(
+            zip([i for i in range(len(buttons))], zip([None for _ in range(len(buttons))]))
+        )
+
+    def _remove_button_by_idx(self):
+        pass
+
+    def _buttons_idx_for_idx_led(self, idx):
+        buttons_idx = []
+        for b in range(len(self._buttons)):
+            if idx in self._buttons[b] and self._buttons_pressed[b] == None:
+                buttons_idx.append(b)
+        return buttons_idx
+
+    def _pressed_button(self, idx, n):
+        if self._buttons_pressed[idx] is not None:
+            self._buttons_pressed[idx] += n
+        else:
+            self._buttons_pressed[idx] = 0
+
+        for led in self._buttons[idx]:
+            self._current_state[led] += n
+
+    def __repr__(self):
+        return "Machine()"
+
+    def __str__(self):
+        return f"{self._buttons=}, {self._current_state=}"
+
+    def solve(self):
+        pass
+
+    def reduc(self, level=1):
+        for led in range(len(self._current_state)):
+            if self._current_state[led] > 0:
+                continue
+            buttons_indexes = self._buttons_idx_for_idx_led(led)
+            if len(buttons_indexes) == 1:
+                self._pressed_button(buttons_indexes[0])
+                return self.reduc(level)
+            if len(buttons_indexes) == 2:
+                max_push = [self._get_max_push(button_index) in buttons_indexes]
+                for n in range(self._wanted_state[led]):
+
+                for bx in buttons_indexes:
+                    self._pressed_button(buttons_indexes[0])
+                    return True, self.reduc(level)
+
+
+def main():
+    lines = read_file()
+    machines = parse_machines(lines)
+    sum_ = 0
+    for machine in machines:
+        comb = calc_combinaisons(machine["buttons"])
+        buttons_to_press = solve(machine, comb)
+        sum_ += len(buttons_to_press)
+    print('Star 1: ', sum_)
+
+    sum_jolt = 0
+    for machine in machines:
+        s = Machine(machine["jolts"], machine["buttons"])
+        s.reduc()
+        print(s)
+    print('Star 2: ', sum_jolt)
+
+
+main()
