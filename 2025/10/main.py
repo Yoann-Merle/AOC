@@ -60,26 +60,6 @@ def solve(machine, combs):
     return solution
 
 
-def state_reduct_2(state):
-    while True:
-        reduc = False
-        for led in range(len(state["leds"])):
-            buts = buttons_for_idx_led(state["buttons"], led)
-            if len(buts) == 2:
-                states_clones = []
-                for new_index in range(state["leds"][led]["objectif"]):
-                    state_clone = copy.deepcopy(state)
-                    state_clone["pressed"][buts[0]] = new_index
-                    state_clone["buttons"] = remove_but_with_led_idx(
-                        state_clone["buttons"], led)
-                    states_clones.append(state_clone)
-                reduc = True
-                break
-        if not reduc:
-            break
-    return state_clone
-
-
 def calc_combinaisons(buttons):
     comb = []
     for b in range(len(buttons) + 1):
@@ -88,21 +68,16 @@ def calc_combinaisons(buttons):
 
 
 class Machine:
-
     def __init__(self, wanted_state, buttons):
         self._buttons = buttons
         self._wanted_state = wanted_state
         self._current_state = [0 for _ in range(len(wanted_state))]
-        self._buttons_pressed = dict(
-            zip([i for i in range(len(buttons))], zip([None for _ in range(len(buttons))]))
-        )
-
-    def _remove_button_by_idx(self):
-        pass
+        self._buttons_pressed = [None for _ in range(len(buttons))]
 
     def _buttons_idx_for_idx_led(self, idx):
         buttons_idx = []
         for b in range(len(self._buttons)):
+
             if idx in self._buttons[b] and self._buttons_pressed[b] == None:
                 buttons_idx.append(b)
         return buttons_idx
@@ -111,13 +86,13 @@ class Machine:
         if self._buttons_pressed[idx] is not None:
             self._buttons_pressed[idx] += n
         else:
-            self._buttons_pressed[idx] = 0
+            self._buttons_pressed[idx] = n
 
         for led in self._buttons[idx]:
             self._current_state[led] += n
 
     def __repr__(self):
-        return "Machine()"
+        return f"Machine({self._current_state=}, {self._buttons_pressed=})"
 
     def __str__(self):
         return f"{self._buttons=}, {self._current_state=}"
@@ -125,21 +100,52 @@ class Machine:
     def solve(self):
         pass
 
-    def reduc(self, level=1):
-        for led in range(len(self._current_state)):
-            if self._current_state[led] > 0:
-                continue
-            buttons_indexes = self._buttons_idx_for_idx_led(led)
-            if len(buttons_indexes) == 1:
-                self._pressed_button(buttons_indexes[0])
-                return self.reduc(level)
-            if len(buttons_indexes) == 2:
-                max_push = [self._get_max_push(button_index) in buttons_indexes]
-                for n in range(self._wanted_state[led]):
+    def _get_max_push(self, idx):
+        max = 0
+        for led_idx in self._buttons[idx]:
+            n = self._wanted_state[led_idx] - self._current_state[led_idx]
+            if n > max:
+                max = n
+        return max
 
-                for bx in buttons_indexes:
-                    self._pressed_button(buttons_indexes[0])
-                    return True, self.reduc(level)
+    def solve(self):
+        states = [self]
+        self.reducto(1)
+        new_states = self.reducto(2)
+        return new_states
+
+    def reduce_states(self, states):
+        new_states = []
+        for state in states:
+            new_states += state.reducto(1)
+
+        return new_states
+
+    def reducto(self, level=1):
+        for led in range(len(self._current_state)):
+            buttons_indexes = self._buttons_idx_for_idx_led(led)
+            target = self._wanted_state[led] - self._current_state[led]
+            len_but_idx = len(buttons_indexes)
+            if len(buttons_indexes) != level:
+                continue
+            max_pushes = [self._get_max_push(bi) for bi in buttons_indexes]
+            max_push = max(max_pushes)
+            clones = []
+            def isValidSeq():
+                if sum(seq) != target:
+                    return False
+                for i in range(len_but_idx):
+                    if seq[i] > max_pushes[i]:
+                        return False
+                return True
+            for seq in itertools.combinations(range(max_push + 1), len_but_idx):
+                if not isValidSeq:
+                    continue
+                clone = copy.deepcopy(self)
+                for s in range(len(seq)):
+                    clone._pressed_button(buttons_indexes[s], seq[s])
+                clones.append(clone)
+            return clones
 
 
 def main():
@@ -155,8 +161,8 @@ def main():
     sum_jolt = 0
     for machine in machines:
         s = Machine(machine["jolts"], machine["buttons"])
-        s.reduc()
-        print(s)
+        print(s.solve())
+        break
     print('Star 2: ', sum_jolt)
 
 
